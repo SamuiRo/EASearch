@@ -1,0 +1,27 @@
+{
+  "name": "easearch",
+  "version": "1.0.0",
+  "description": "Multi-provider search skill for [OpenClaw](https://github.com/openclaw).\r Pluggable provider architecture — start with **Brave Search**, add more providers (DuckDuckGo, Bing, etc.) as needed with zero changes to the core router.",
+  "main": "easearch.js",
+  "dependencies": {
+    "dotenv": "^16.6.1"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "node easearch.js \"hello world\" --lang en --count 3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SamuiRo/EASearch.git"
+  },
+  "keywords": [
+    "openclaw",
+    "search"
+  ],
+  "author": "StarLith",
+  "license": "GPL",
+  "bugs": {
+    "url": "https://github.com/SamuiRo/EASearch/issues"
+  },
+  "homepage": "https://github.com/SamuiRo/EASearch#readme"
+}
