@@ -14,7 +14,8 @@ easearch/
 ├── easearch.js               ← main router — provider selection & fallback
 ├── .env.example              ← API key template
 ├── providers/
-│   ├── brave.js              ← Brave Search provider
+│   ├── brave.js              ← Brave Search provider (primary)
+│   ├── duckduckgo.js         ← DuckDuckGo provider (fallback, no API key)
 │   └── README.md             ← how to add a new provider
 └── references/
     ├── api-reference.md      ← Brave API parameter reference
@@ -32,7 +33,7 @@ cd easearch
 npm install
 ```
 
-> Node.js ≥ 18 has `fetch` built-in. Only `dotenv` is installed via npm.
+> Node.js ≥ 18 has `fetch` built-in. Dependencies (`dotenv`, `cheerio`) are installed automatically via `npm install`.
 
 ### 2. API key
 
@@ -91,6 +92,7 @@ node easearch.js "AI news" --news --lang en --fresh pw
 
 # Force a specific provider
 node easearch.js "search query" --provider brave
+node easearch.js "search query" --provider duckduckgo
 ```
 
 ### All options
@@ -99,7 +101,7 @@ node easearch.js "search query" --provider brave
 |------|--------|-------------|
 | `--lang <code>` | `ua` `en` `ja` `ko` `de` `fr` `pl`… | Result language |
 | `--mode <type>` | `web` `llm` `news` `images` `video` | Search mode |
-| `--provider <n>` | `brave` | Force a specific provider |
+| `--provider <n>` | `brave` `duckduckgo` | Force a specific provider |
 | `--no-fallback` | — | Disable automatic provider fallback |
 | `--count <N>` | 1–20 | Number of results (default 10) |
 | `--fresh <period>` | `pd` `pw` `pm` `py` | Freshness: day/week/month/year |
@@ -113,19 +115,16 @@ node easearch.js "search query" --provider brave
 
 ---
 
-## Adding a provider
+## Providers
 
-Each provider is a single file in `providers/` exporting a standard interface.
-The router auto-discovers files in that directory and tries them in priority order.
+| Provider | Priority | API key | Modes | Notes |
+|----------|----------|---------|-------|-------|
+| **Brave** | Primary | `BRAVE_API_KEY` (required) | web, llm, news, images, video | Full-featured, 30B+ index |
+| **DuckDuckGo** | Fallback | — (no key needed) | web, news, images | Scraping-based; no llm/video |
 
-See [`providers/README.md`](providers/README.md) for the full guide and interface spec.
+The router tries providers in order (`PROVIDER_ORDER` in `easearch.js`). A provider is skipped if it's unavailable or doesn't support the requested mode. To add more providers, see [`providers/README.md`](providers/README.md).
 
-Quick example for DuckDuckGo:
-1. Create `providers/duckduckgo.js` following the interface in `providers/README.md`
-2. Add `"duckduckgo"` to `PROVIDER_ORDER` in `easearch.js`
-3. Add `DDG_API_KEY=` to `.env.example`
-
-That's it — the fallback logic is already in place.
+> **Note:** DuckDuckGo uses web scraping — its HTML structure may change without notice. If results stop working, check for selector changes in `providers/duckduckgo.js`.
 
 ---
 
@@ -143,13 +142,17 @@ Rules:
 
 ## Plans & limits (Brave)
 
-| Plan | Requests/month | LLM Context |
-|------|---------------|-------------|
-| Free | 1,000 | ✅ |
-| Base | 20,000 | ✅ |
-| Pro | 100,000 | ✅ |
+| Plan | Requests/month | LLM Context | Extra snippets |
+|------|---------------|-------------|----------------|
+| Free | 2,000 | ✅ | ❌ |
+| Base | 20,000 | ✅ | ❌ |
+| Base AI | 20,000 | ✅ | ✅ |
+| Pro | 100,000 | ✅ | ❌ |
+| Pro AI | 100,000 | ✅ | ✅ |
 
 Details: <https://api-dashboard.search.brave.com/app/plans>
+
+**DuckDuckGo** — no account or limits; subject to scraping rate limits if requests are too frequent.
 
 ---
 
@@ -158,8 +161,10 @@ Details: <https://api-dashboard.search.brave.com/app/plans>
 | Error | Cause | Fix |
 |-------|-------|-----|
 | `BRAVE_API_KEY not set` | No `.env` or env var | Add key to `.env` in project root |
-| `401` | Invalid key | Check value in `.env` |
-| `429` | Rate limit | Wait or upgrade plan |
+| `401` | Invalid Brave key | Check value in `.env` |
+| `429` | Rate limit (Brave or DDG) | Wait; for Brave — upgrade plan |
 | `ENOTFOUND` | No network | Check connection |
 | LLM no results | Threshold too strict | Try `--threshold lenient` or `--mode web` |
-| Provider failed | API error | Fallback runs automatically |
+| DDG no results | Selector changed | Update selectors in `providers/duckduckgo.js` |
+| DDG blocked | Bot detection triggered | Reduce request frequency; UA rotation is built-in |
+| Provider failed | API / scrape error | Fallback runs automatically |

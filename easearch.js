@@ -59,7 +59,7 @@
 // ─── Provider registry ────────────────────────────────────────────────────────
 // Order determines fallback priority: first available provider that supports
 // the requested mode will be used. Add new providers here as they are implemented.
-const PROVIDER_ORDER = ["brave"];
+const PROVIDER_ORDER = ["brave", "duckduckgo"];
 
 const fs       = require("fs");
 const path     = require("path");
@@ -67,13 +67,37 @@ const PROVIDERS = {};
 
 for (const name of PROVIDER_ORDER) {
   const file = path.join(__dirname, "providers", `${name}.js`);
-  if (fs.existsSync(file)) {
-    try {
-      PROVIDERS[name] = require(file);
-    } catch (err) {
-      process.stderr.write(`⚠️  [router] Failed to load provider "${name}": ${err.message}\n`);
-    }
+  if (!fs.existsSync(file)) {
+    process.stderr.write(`⚠️  [router] Provider "${name}": file not found at ${file}\n`);
+    continue;
   }
+  let mod;
+  try {
+    mod = require(file);
+  } catch (err) {
+    process.stderr.write(`❌ [router] Provider "${name}" crashed on load:\n`);
+    process.stderr.write(`   ${err.stack || err.message}\n`);
+    continue;
+  }
+  const missing = ["name", "modes", "isAvailable", "search"].filter(
+    (k) => !(k in mod)
+  );
+  if (missing.length > 0) {
+    process.stderr.write(
+      `⚠️  [router] Provider "${name}" loaded but missing exports: ${missing.join(", ")}\n` +
+      `   Exported keys: ${Object.keys(mod).join(", ") || "(none)"}\n` +
+      `   File: ${file}\n`
+    );
+    continue;
+  }
+  if (typeof mod.isAvailable !== "function" || typeof mod.search !== "function") {
+    process.stderr.write(
+      `⚠️  [router] Provider "${name}": isAvailable=${typeof mod.isAvailable}, search=${typeof mod.search}\n`
+    );
+    continue;
+  }
+  process.stderr.write(`✅ [router] Provider "${name}" loaded OK (modes: ${mod.modes.join(", ")})\n`);
+  PROVIDERS[name] = mod;
 }
 
 // ─── Argument parsing ─────────────────────────────────────────────────────────
@@ -145,8 +169,17 @@ async function runWithFallback(opts) {
     .filter((name) => !PROVIDERS[name].modes || PROVIDERS[name].modes.includes(opts.mode));
 
   if (candidates.length === 0) {
-    process.stderr.write("❌ No configured providers available. Check your .env file.\n");
-    process.stderr.write(`   Expected at least one of: ${PROVIDER_ORDER.join(", ")}\n`);
+    process.stderr.write("❌ No configured providers available.\n");
+    // Show per-provider diagnosis
+    for (const name of PROVIDER_ORDER) {
+      if (!PROVIDERS[name]) {
+        process.stderr.write(`   • "${name}": failed to load (see warnings above)\n`);
+      } else if (!PROVIDERS[name].isAvailable()) {
+        process.stderr.write(`   • "${name}": loaded OK but not available (API key missing?)\n`);
+      } else if (!PROVIDERS[name].modes.includes(opts.mode)) {
+        process.stderr.write(`   • "${name}": available but does not support mode "${opts.mode}"\n`);
+      }
+    }
     process.exit(1);
   }
 

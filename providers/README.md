@@ -36,6 +36,7 @@ Providers are tried in priority order defined in `easearch.js` → `PROVIDER_ORD
 A provider is skipped if:
 - `isAvailable()` returns `false` (not configured)
 - `search()` throws an error (API failure, rate limit, etc.)
+- The requested mode is not listed in the provider's `modes` array
 
 When a fallback occurs, EASearch logs `⚠️  [router] Falling back from X to Y` to stderr.
 
@@ -48,10 +49,17 @@ The router will only attempt fallback to providers that list the requested mode 
 
 Name your key `<PROVIDER_NAME_UPPERCASE>_API_KEY` and document it here:
 
-| Provider | Env var | Get a key |
-|----------|---------|-----------|
-| brave | `BRAVE_API_KEY` | https://api-dashboard.search.brave.com/register |
-| *(future)* duckduckgo | `DDG_API_KEY` | — |
-| *(future)* bing | `BING_API_KEY` | https://www.microsoft.com/en-us/bing/apis |
+| Provider | Env var | Status | Get a key |
+|----------|---------|--------|-----------|
+| brave | `BRAVE_API_KEY` | ✅ Implemented | https://api-dashboard.search.brave.com/register |
+| duckduckgo | — | ✅ Implemented | No key needed (scraping-based) |
+| *(future)* bing | `BING_API_KEY` | — | https://www.microsoft.com/en-us/bing/apis |
 
-Add a matching entry to `.env.example` in the project root.
+Add a matching entry to `.env.example` in the project root (for API-key-based providers only).
+
+## Notes on scraping-based providers (e.g. DuckDuckGo)
+
+- `isAvailable()` should always return `true` (no key to check)
+- Use `User-Agent` rotation to reduce bot detection
+- HTML structure may change without notice — document your selectors clearly
+- Implement retry logic on 429 / transient errors

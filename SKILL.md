@@ -14,6 +14,7 @@ description: >
 # EASearch — OpenClaw Skill
 
 Multi-provider search tool. Primary provider: **Brave Search** (30B+ page index, independent of Google/Bing).
+Fallback provider: **DuckDuckGo** (scraping-based, no API key required — supports web, news, images).
 Automatic fallback to next available provider on failure.
 
 ---
@@ -31,7 +32,7 @@ node easearch.js "<query>" [options]
 | `--lang <code>` | `ua` `en` `ja` `ko` `de` `fr` `pl`… | Result language |
 | `--mode <type>` | `web` / `llm` / `news` / `images` / `video` | Search mode (default: `web`) |
 | `--news` / `--images` / `--video` | — | Shortcut for `--mode` |
-| `--provider <name>` | `brave` … | Force a specific provider, skip fallback |
+| `--provider <n>` | `brave` `duckduckgo` | Force a specific provider, skip fallback |
 | `--no-fallback` | — | Disable automatic provider fallback |
 | `--count <N>` | 1–20 (default 10) | Number of results |
 | `--fresh <period>` | `pd` `pw` `pm` `py` | Freshness: day/week/month/year |
@@ -86,6 +87,7 @@ node easearch.js "AI news" --news --lang en --fresh pw
 
 # Force provider / disable fallback
 node easearch.js "search query" --provider brave --no-fallback
+node easearch.js "search query" --provider duckduckgo
 ```
 
 ---
@@ -118,7 +120,9 @@ node easearch.js "search query" --provider brave --no-fallback
 | `429` | Script auto-retries; if persists — wait or upgrade plan |
 | `422` | Check query syntax |
 | No LLM results | Try `--threshold lenient` or switch to `--mode web` |
-| Provider failure | Fallback runs automatically; use `--provider brave` to force |
+| DDG no results | Selector may have changed — check `providers/duckduckgo.js` |
+| DDG blocked | Reduce request frequency; built-in UA rotation helps |
+| Provider failure | Fallback runs automatically; use `--provider brave` or `--provider duckduckgo` to force |
 
 ---
 

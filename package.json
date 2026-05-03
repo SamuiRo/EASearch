@@ -1,12 +1,12 @@
 {
   "name": "easearch",
-  "version": "1.0.0",
-  "description": "Multi-provider search skill for [OpenClaw](https://github.com/openclaw).\r Pluggable provider architecture — start with **Brave Search**, add more providers (DuckDuckGo, Bing, etc.) as needed with zero changes to the core router.",
+  "version": "1.1.0",
+  "description": "Multi-provider search skill for [OpenClaw](https://github.com/openclaw).",
   "main": "easearch.js",
   "dependencies": {
+    "cheerio": "^1.2.0",
     "dotenv": "^16.6.1"
   },
-  "devDependencies": {},
   "scripts": {
     "test": "node easearch.js \"hello world\" --lang en --count 3"
   },
